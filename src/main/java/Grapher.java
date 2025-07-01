@@ -134,8 +134,8 @@ public class Grapher {
         chart.getStyler().setChartTitleBoxVisible(false);
         chart.getStyler().setChartTitleBoxBorderColor(null);
         chart.getStyler().setAxisTickPadding(0);
-        chart.getStyler().setXAxisMin(startDate);
-        chart.getStyler().setXAxisMax(endApproxDate);
+        chart.getStyler().setXAxisMin();
+        chart.getStyler().setXAxisMax();
         chart.getStyler().setYAxisMax(300.0);
         chart.getStyler().setYAxisMin(0.0);
         chart.getStyler().setAxisTickMarkLength(15);
@@ -151,22 +151,18 @@ public class Grapher {
         chart.getStyler().setLocale(Locale.ENGLISH);
 
         //Add data to graph
-        XYSeries dataSeries = chart.addSeries("Sunspot Data", xTruncData, yTruncData);
-        XYSeries approxSeries = chart.addSeries("Approx Sunspot Data", xApprox, taylorApproxOuter(degree,xTruncData,yTruncData,center,startDate,endDate));
-        XYSeries futureSeries = chart.addSeries("After Sunspot Data", xAfterData,yAfterData);
-        XYSeries futureApproxSeries = chart.addSeries("Predicted Sunspot Data", xAfterApprox, taylorApproxOuter(degree,xTruncData,yTruncData,center,endDate,endApproxDate));
 
         //Style individual series
-        dataSeries.setLineColor(XChartSeriesColors.BLUE);
-        dataSeries.setLineStyle(SeriesLines.NONE);
-        futureSeries.setLineColor(XChartSeriesColors.GREEN);
-        futureSeries.setLineStyle(SeriesLines.NONE);
-        approxSeries.setLineStyle(SeriesLines.SOLID);
-        approxSeries.setLineColor(XChartSeriesColors.PURPLE);
-        approxSeries.setSmooth(true);
-        futureApproxSeries.setLineColor(XChartSeriesColors.RED);
-        futureApproxSeries.setLineStyle(SeriesLines.SOLID);
-        futureApproxSeries.setSmooth(true);
+//        dataSeries.setLineColor(XChartSeriesColors.BLUE);
+//        dataSeries.setLineStyle(SeriesLines.NONE);
+//        futureSeries.setLineColor(XChartSeriesColors.GREEN);
+//        futureSeries.setLineStyle(SeriesLines.NONE);
+//        approxSeries.setLineStyle(SeriesLines.SOLID);
+//        approxSeries.setLineColor(XChartSeriesColors.PURPLE);
+//        approxSeries.setSmooth(true);
+//        futureApproxSeries.setLineColor(XChartSeriesColors.RED);
+//        futureApproxSeries.setLineStyle(SeriesLines.SOLID);
+//        futureApproxSeries.setSmooth(true);
 
         //display chart
         new SwingWrapper<XYChart>(chart).displayChart();
@@ -181,128 +177,6 @@ public class Grapher {
         return output;
     }
 
-    public ArrayList<Double> taylorApproxOuter(int iterations, double[] xData, double[] yData, double center, double startDate, double endDate) throws InterruptedException {
-        double total = 0;
-       System.out.println("Center: "+center);
-        int centerIndex = centerIndex(xData, center);
-        double[] newXdata = new double[iterations + 1];
-        double[] newYData = new double[iterations + 1];
-        int count = 0;
-        if (iterations % 2 == 0) {
-            int diff = iterations / 2;
-            for (int i = centerIndex - diff; i <= centerIndex + diff; i++) {
-                newXdata[count] = xData[i];
-                newYData[count] = yData[i];
-                count++;
-            }
-        } else {
-            int diff = iterations / 2;
-            for (int i = centerIndex - diff; i <= centerIndex + diff + 1; i++) {
-                newXdata[count] = xData[i];
-                newYData[count] = yData[i];
-                count++;
-            }
-        }
-
-         centerIndex = centerIndex(newXdata, center);
-        if(coeff == null) {
-            coeff = new ArrayList<Double>();
-            coeff.add(newYData[centerIndex]);
-            double last = taylorApproxCoeff(iterations, newXdata, newYData, center);
-        }
-
-        System.out.print("FINAL COEFFICIENTS: [");
-        for(double co : coeff){
-            System.out.print(co+", ");
-        }
-        System.out.println("]");
-        ArrayList<Double> points = new ArrayList<>();
-        for(double num = startDate; num<endDate; num+=0.08) {
-            //Nullify rounding error
-            num*=100;
-            num= Math.round(num);
-            num/=100.0;
-
-            total = taylorApproxSum(num,center);
-            System.out.println("Total for "+num+": "+ total);
-            points.add(total);
-        }
-        System.out.println("Total points: "+ points.size());
-
-        return points;
-
-    }
-
-    public double taylorApproxCoeff(int iterations, double[] xData, double[] yData, double center) throws InterruptedException {
-     //   Thread.sleep((long) (Math.random()*100));
-
-        System.out.print(iterations+" xdata: [");
-        for(double x : xData){
-            System.out.print(x+", ");
-        }
-        System.out.println("]");
-        System.out.print("\t"+iterations+" ydata: [");
-        for(double x : yData){
-            System.out.print(x+", ");
-        }
-        System.out.println("]");
-        if(iterations == 1){
-
-            if(!vars.get("1")) {
-                coeff.add((yData[1] - yData[0])/(xData[1] - xData[0]));
-                System.out.println("Iteration "+iterations+": "+((yData[1] - yData[0])/(xData[1] - xData[0])));
-                vars.put("1", true);
-            }
-            return  (yData[1] - yData[0])/(xData[1] - xData[0]);
-        }else{
-            int centIndex = centerIndex(xData,center);
-            if(vars.get(""+iterations) == null || !vars.get(""+iterations)) {
-                vars.put("" + (iterations - 1), false);
-            }
-            double next = ((taylorApproxCoeff(iterations - 1, arrayShortener(xData,centIndex, true),
-                            arrayShortener(yData, centIndex, true), center) -
-                    taylorApproxCoeff(iterations - 1, arrayShortener(xData,centIndex, false),
-                            arrayShortener(yData, centIndex, false), center))/
-                    (((sum(arrayShortener(xData,centIndex,true)))/(iterations)) -
-                    ((sum(arrayShortener(xData,centIndex,false)))/(iterations))))
-            ;
-//            System.out.println(vars.get(""+iterations));
-
-            if(vars.get(""+iterations) == null || !vars.get(""+iterations)) {
-                System.out.println("Iteration "+iterations+": "+next);
-                coeff.add(next);
-                vars.put(""+iterations, true);
-            }
-            return next;
-
-        }
-    }
-
-
-    public double taylorApproxSum(double num, double center){
-        double total = 0;
-        double difference = num-center;
-        for(int i = 0; i<coeff.size(); i++){
-            total+= ((coeff.get(i)*Math.pow(difference,i))/factorial(i));
-        }
-        return total;
-    }
-
-    //Shortens array by 1 index depending on placement
-    public double[] arrayShortener(double[] oldArr, int centerIndex, boolean first){
-        double[] newArr = new double[oldArr.length -1];
-        if (first) {
-            for(int i = 0; i<newArr.length; i++) {
-                newArr[i] = oldArr[i];
-            }
-
-        } else {
-            for (int i = 0; i< newArr.length; i++){
-                newArr[i] = oldArr[i+1];
-            }
-        }
-        return newArr;
-    }
 
     //Gets the index of the 'center' of an array
     public int centerIndex(double[] arr, double center){
