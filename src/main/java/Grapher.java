@@ -6,15 +6,27 @@ import org.knowm.xchart.*;
 import org.knowm.xchart.style.*;
 import org.knowm.xchart.style.colors.*;
 import org.knowm.xchart.style.lines.SeriesLines;
+import org.knowm.xchart.XYChart;         // For XY charts
+import org.knowm.xchart.XYSeries;
+import org.knowm.xchart.style.markers.Marker;
+import org.knowm.xchart.style.markers.SeriesMarkers;
+//import org.knowm.xchart.;
+import org.knowm.xchart.BitmapEncoder;
+import org.knowm.xchart.BitmapEncoder.BitmapFormat;
+
 
 
 //General Imports
 import java.awt.*;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Scanner;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
 
 public class Grapher {
     private ArrayList<Double> coeff;
@@ -26,15 +38,10 @@ public class Grapher {
     }
 
     //2D Grapher
-    public Grapher(double[] x, double[] y) throws InterruptedException{
-        //Get endpoints
-        Scanner scan = new Scanner(System.in);
-        System.out.println("Please choose a starting year");
-        double startDate = Double.parseDouble(scan.nextLine());
-        System.out.println("Please choose an ending year");
-        double endDate = Double.parseDouble(scan.nextLine());
-        System.out.println("Please enter a ending year for the approximation");
-        double endApproxDate = Double.parseDouble(scan.nextLine());
+    public Grapher(double[] x, double[] y, double[] x2, double[] y2) throws InterruptedException{
+        //Set endpoints
+        double startDate = 2010.0;
+        double endDate = 2026.0;
 
         //find approx index of endpoints
         int startIndex = -1;
@@ -42,7 +49,6 @@ public class Grapher {
         int endApproxIndex = -1;
         boolean foundStart = false;
         boolean foundEnd = false;
-        boolean foundEndApprox = false;
         for(int i = 0; i<x.length; i++){
             if(x[i] >= startDate && !foundStart){
                 startIndex = i;
@@ -54,71 +60,19 @@ public class Grapher {
                 System.out.println("End: "+endIndex);
                 foundEnd = true;
             }
-            if (x[i] >= endApproxDate && !foundEndApprox){
-                endApproxIndex = i-1;
-                System.out.println("EndApprox: "+endApproxIndex);
-                foundEndApprox = true;
-
-            }
         }
 
         //Create new arrays with data in each time range
-        double[] xTruncData = new double[endIndex-startIndex+1];
-        double[] yTruncData = new double[endIndex-startIndex+1];
+        double[] xTruncData = new double[Math.abs(endIndex-startIndex+1)];
+        double[] yTruncData = new double[Math.abs(endIndex-startIndex+1)];
         int count = 0;
         for(int j = startIndex; j<=endIndex; j++){
             xTruncData[count] = x[j];
             yTruncData[count] = y[j];
             count++;
         }
-        int endOfApproxDataIndex;
-        if(endApproxIndex == -1){
-            endOfApproxDataIndex = x.length;
-        }else{
-            endOfApproxDataIndex = endApproxIndex;
-        }
-        double[] xAfterData = new double[endOfApproxDataIndex-endIndex+1];
-        double[] yAfterData = new double[endOfApproxDataIndex-endIndex+1];
-        count = 0;
-        for(int l = endIndex; l<=endOfApproxDataIndex; l++){
-            xAfterData[count] = x[l];
-            yAfterData[count] = y[l];
-            count++;
-        }
-//
-//        //Curve fitting
-//        Collection<WeightedObservedPoint> points = new ArrayList<>();
-//        for(int k = 0; k<xTruncData.length; k++){
-//            points.add(new WeightedObservedPoint(1, xTruncData[k], yTruncData[k]));
-//        }
-//        PolynomialCurveFitter fitter = PolynomialCurveFitter.create(15);
-////        fitter = fitter.getO
-//        double[] coefficients = fitter.fit(points);
 
-        //Creates a new array list with approximated values
-        ArrayList<Double> xApprox = new ArrayList<>();
-        ArrayList<Double> yApprox = new ArrayList<>();
-        int degree = 15;
-        double center = xTruncData[xTruncData.length/2];
-        for(double d = startDate; d<endDate; d+= 0.08){
-            //Nullify any rounding errors
-            d*=100;
-            d= Math.round(d);
-            d/=100.0;
-            xApprox.add(d);
-            //System.out.println("d: "+d);
-            
-        }
-        ArrayList<Double> xAfterApprox = new ArrayList<>();
-        for(double f = endDate; f<endApproxDate; f+= 0.08){
-            //Nullify rounding error
-            f*=100;
-            f = Math.round(f);
-            f/=100.0;
 
-            xAfterApprox.add(f);
-        }
-        
 
         //Create 2D graph
         XYChart chart = new XYChartBuilder().width(800).height(600).title("Sunspot Number Over Time").xAxisTitle("Year").yAxisTitle("Sunspot Number").build();
@@ -134,8 +88,8 @@ public class Grapher {
         chart.getStyler().setChartTitleBoxVisible(false);
         chart.getStyler().setChartTitleBoxBorderColor(null);
         chart.getStyler().setAxisTickPadding(0);
-        chart.getStyler().setXAxisMin();
-        chart.getStyler().setXAxisMax();
+        chart.getStyler().setXAxisMin(startDate);
+        chart.getStyler().setXAxisMax(endDate);
         chart.getStyler().setYAxisMax(300.0);
         chart.getStyler().setYAxisMin(0.0);
         chart.getStyler().setAxisTickMarkLength(15);
@@ -149,23 +103,37 @@ public class Grapher {
         chart.getStyler().setDatePattern("MM-dd");
         chart.getStyler().setDecimalPattern("#0");
         chart.getStyler().setLocale(Locale.ENGLISH);
+        chart.getStyler().setYAxisTickLabelsColor(Color.BLUE);
+
+
 
         //Add data to graph
+        XYSeries chSeries = (XYSeries) chart.addSeries("Coronal Hole Data", x2, y2).setYAxisGroup(1);
+        XYSeries sunspotSeries = chart.addSeries("Sunspot Data", x, y);
+
+
+        //Yaxis group
+        chart.setYAxisGroupTitle(1, "Coronal Hole Area (1/1000s of a Solar Disk)");
+        chart.getStyler().setYAxisGroupPosition(1, Styler.YAxisPosition.Right);
+        chart.getStyler().setYAxisGroupTickLabelsColorMap(1,Color.GREEN);
 
         //Style individual series
-//        dataSeries.setLineColor(XChartSeriesColors.BLUE);
-//        dataSeries.setLineStyle(SeriesLines.NONE);
-//        futureSeries.setLineColor(XChartSeriesColors.GREEN);
-//        futureSeries.setLineStyle(SeriesLines.NONE);
-//        approxSeries.setLineStyle(SeriesLines.SOLID);
-//        approxSeries.setLineColor(XChartSeriesColors.PURPLE);
-//        approxSeries.setSmooth(true);
-//        futureApproxSeries.setLineColor(XChartSeriesColors.RED);
-//        futureApproxSeries.setLineStyle(SeriesLines.SOLID);
-//        futureApproxSeries.setSmooth(true);
+        sunspotSeries.setLineColor(XChartSeriesColors.BLUE);
+        sunspotSeries.setLineStyle(SeriesLines.SOLID);
+        sunspotSeries.setMarker(SeriesMarkers.NONE);
+        chSeries.setLineColor(XChartSeriesColors.GREEN);
+        chSeries.setLineStyle(SeriesLines.SOLID);
+        chSeries.setMarker(SeriesMarkers.NONE);
+
 
         //display chart
         new SwingWrapper<XYChart>(chart).displayChart();
+//        try {
+//            BitmapEncoder.saveBitmap(chart, getTime(), BitmapFormat.PNG);
+//        } catch (IOException e) {
+//            System.out.println(e.getMessage());
+//            throw new RuntimeException(e);
+//        }
     }
 
     //Get coefficients of least squares approx method
@@ -207,5 +175,11 @@ public class Grapher {
             }
         }
         return total;
+    }
+
+    public String getTime(){
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+        return now.format(formatter);
     }
 }

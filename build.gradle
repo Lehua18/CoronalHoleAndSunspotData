@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.knowm.xchart:xchart:3.8.6'
+    implementation 'org.knowm.xchart:xchart:3.8.8'
     implementation 'org.apache.commons:commons-math4-legacy:4.0-beta1'
     implementation files('libs/RinearnGraph3D.jar')
     implementation 'org.apache.commons:commons-numbers-core:1.2'

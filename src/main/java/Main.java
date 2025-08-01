@@ -4,17 +4,6 @@ import java.io.FileNotFoundException;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-//DONKI Data Imports
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONArray;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
-
 //Other Imports
 import java.util.HashMap;
 import java.util.Map;
@@ -24,7 +13,8 @@ import java.util.Objects;
 
 public class Main {
     private static int count;
-    private Map<String, double[]> vars = new HashMap<>();
+    private static Map<String, DataSeries> vars = new HashMap<>();
+   // private static ArrayList<Double> yrAsDec = new ArrayList<>();
 
     public static void main(String[] args) {
         //***!!!Get and store sunspot Data!!!***
@@ -47,63 +37,20 @@ public class Main {
             System.out.println("File not found: " + e.getMessage());
             System.exit(1);
         }
-        double[] yrAsDec = new double[allData.size()];
         double[] sunspotNum = new double[allData.size()];
-        //and others?
+        double[] yrAsDec = new double[allData.size()];
         for (int i = 0; i < allData.size(); i++) {
             yrAsDec[i] = allData.get(i).getYrAsDec();
         }
         for (int j = 0; j < allData.size(); j++) {
             sunspotNum[j] = allData.get(j).getSunspotNum();
         }
-        //and others?
 
-        //***!!!Get and Store DONKI Data!!!***
-        Scanner scan = new Scanner(System.in);
-        String timeKey = "";
-        String eventType = "";
-        do {
-            System.out.println("Please enter the type of event you would like to view:");
-            eventType = scan.nextLine();
-            //to get correct time key depending on event. Also functions to validate user entry
-            timeKey = getTimeString(eventType);
-        } while (timeKey.isEmpty());
-
-        //Get data endpoints
-        System.out.println("Please enter a start date in the form yyyy-MM-dd");
-        String startDate = scan.nextLine();
-        System.out.println("Please enter an end date in the form yyyy-MM-dd");
-        String endDate = scan.nextLine();
-
-        //creates URL to get JSON data
-        String url = "https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get/" + eventType + "?startDate=" + startDate + "&endDate=" + endDate;
-        JSONArray array = URLToJSON(url);
-
-        //***!!!Get User Input***!!!
-
-        boolean stop = false;
-        int dims;
-        do {
-            System.out.println("How many dimensions would you like your graph to be?");
-            dims = Integer.parseInt(scan.nextLine());
-            if (dims == 2 || dims == 3) {
-                stop = true;
-            }
-        } while (!stop);
-        System.out.println("Here are the currently available quantities:");
-        //for loop to print all those guys
-        System.out.println("Please choose a quantity to plot on the x axis.");
-        String xAxisString = scan.nextLine();
-        System.out.println("Please choose a quantity to plot on the y axis.");
-        String yAxisString = scan.nextLine();
-        if (dims == 3) {
-            System.out.println("Please choose a quantity to plot on the z axis.");
-            String zAxisString = scan.nextLine();
-        }
+        ArrayList<Double>[] csvData = getValuesFromCsv(uploadCsvFile());
 
         //Graph Data
         try {
-            Grapher grapher = new Grapher(yrAsDec, sunspotNum);
+            Grapher grapher = new Grapher(yrAsDec, sunspotNum, arrListToArr(csvData[0]), arrListToArr(csvData[1]));
         } catch (InterruptedException e) {
             System.out.println("Something went wrong: " + e);
         }
@@ -118,6 +65,27 @@ public class Main {
 
         //Filters files shown to only txt files
         FileNameExtensionFilter filter = new FileNameExtensionFilter("Text Files", "txt", "text");
+        chooser.setFileFilter(filter);
+
+        //Open chooser and get file
+        int returnValue = chooser.showOpenDialog(new JFrame());
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            System.out.println(file.getName());
+            return file;
+        }else{
+            System.out.println("Something went wrong: Code "+returnValue);
+            return null;
+        }
+    }
+
+    public static File uploadCsvFile(){
+        //create JFileChooser
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Open File");
+
+        //Filters files shown to only csv files
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("csv", "csv", "CSV");
         chooser.setFileFilter(filter);
 
         //Open chooser and get file
@@ -156,58 +124,95 @@ public class Main {
         return data.toString();
     }
 
-    public static String getTimeString(String eventType) {
-        String timeKey = "";
-        if (eventType.equals("CME") || eventType.equals("GST")) {
-            timeKey = "startTime";
-        } else if (eventType.equals("IPS") || eventType.equals("SEP") || eventType.equals("MPC") || eventType.equals("RBE") || eventType.equals("HSS")) {
-            timeKey = "eventTime";
-        } else if (eventType.equals("FLR")) {
-            timeKey = "beginTime";
-//        } else if (eventType.equals("ALL")) {
-//            timeKey = "ALL";
-        } else {
-            System.out.println("You have not entered a valid event type, or something else went wrong. Please try again");
-        }
-        return timeKey;
-    }
-
-    public static JSONArray URLToJSON(String URLString){
+    public static ArrayList<Double>[] getValuesFromCsv(File file){
         try {
-            //Convert string to URL
-            URI uri = URI.create(URLString);
-            URL url = uri.toURL();
-
-            //Connect and pull data from URL and store in String
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            int responseCode = connection.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                StringBuilder response = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    response.append(line);
+            ArrayList<Double>[] arr = new ArrayList[2];
+            Scanner scan = new Scanner(file);
+            ArrayList<Double> vals = new ArrayList<>();
+            ArrayList<Double> yrAsDec = new ArrayList<>();
+            scan.nextLine(); //So titles aren't taken as data
+            while (scan.hasNextLine()){
+                String line = scan.nextLine();
+                String[] fields = line.split(",");
+                if(fields.length == 4) {
+                    yrAsDec.add(yrToDecYr(Integer.parseInt(fields[0]), Integer.parseInt(fields[1]), Integer.parseInt(fields[2])));
+                    vals.add(Double.parseDouble(fields[3]));
                 }
-                reader.close();
-                String newJSONString = response.toString();
-
-                //convert String back to JSON Array
-                try {
-                    return new JSONArray(newJSONString);
-                } catch (JSONException e) {
-                    System.out.println("JSON creation failed: "+e);
-                    return null;
                 }
-
-            } else {
-                System.out.println("GET request failed. Response code: " + responseCode);
-                return null;
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace(); /*Okay because this is not production software*/
+            arr[0] = yrAsDec;
+            arr[1] = vals;
+            return arr;
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
             return null;
         }
     }
+
+    public static double yrToDecYr(int year, int month, int  day){
+        double decYear = year;
+        if(year == 2012 || year == 2016 || year == 2020 || year == 2024){
+            if(month == 2){
+                decYear += 0.0847;
+            } else if (month == 3) {
+                decYear+=0.1639;
+            } else if (month == 4) {
+                decYear+=0.2486;
+            } else if (month == 5) {
+                decYear+=0.3306;
+            } else if (month==6) {
+                decYear+=0.4153;
+            } else if (month==7) {
+                decYear+=0.4973;
+            } else if (month==8) {
+                decYear+=0.5820;
+            } else if (month==9) {
+                decYear+=0.6667;
+            } else if (month==10) {
+                decYear+=0.7486;
+            } else if (month==11) {
+                decYear+= 0.8333;
+            }else{
+                decYear+=0.9153;
+            }
+        }else{
+            if(month == 2){
+                decYear += 0.0849;
+            } else if (month == 3) {
+                decYear+=0.1616;
+            } else if (month == 4) {
+                decYear+=0.2466;
+            } else if (month == 5) {
+                decYear+=0.3288;
+            } else if (month==6) {
+                decYear+=0.4137;
+            } else if (month==7) {
+                decYear+=0.4958;
+            } else if (month==8) {
+                decYear+=0.5808;
+            } else if (month==9) {
+                decYear+=0.6658;
+            } else if (month==10) {
+                decYear+=0.7479;
+            } else if (month==11) {
+                decYear+= 0.8329;
+            }else{
+                decYear+=0.9151;
+            }
+        }
+        //Practically equal
+        decYear+= day*0.0027;
+
+        return decYear;
+    }
+
+    public static double[] arrListToArr(ArrayList<Double> arrList){
+        double[] arr = new double[arrList.size()];
+        for(int i = 0; i<arrList.size(); i++){
+            arr[i] = arrList.get(i);
+        }
+        return arr;
+    }
+
+
+
 }
