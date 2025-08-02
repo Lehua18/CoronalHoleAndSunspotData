@@ -134,9 +134,13 @@ public class Main {
             while (scan.hasNextLine()){
                 String line = scan.nextLine();
                 String[] fields = line.split(",");
+                for (int i = 0; i < fields.length; i++) {
+                    fields[i] = fields[i].replace("\"", "").trim(); // strip quotes and whitespace
+                }
                 if(fields.length == 4) {
-                    yrAsDec.add(yrToDecYr(Integer.parseInt(fields[0]), Integer.parseInt(fields[1]), Integer.parseInt(fields[2])));
+                    yrAsDec.add(yrToDecYr((int)Double.parseDouble(fields[0]), (int)Double.parseDouble(fields[1]), (int)Double.parseDouble(fields[2])));
                     vals.add(Double.parseDouble(fields[3]));
+                    System.out.println(yrAsDec.getLast()+", "+vals.getLast());
                 }
                 }
             arr[0] = yrAsDec;
@@ -151,7 +155,9 @@ public class Main {
     public static double yrToDecYr(int year, int month, int  day){
         double decYear = year;
         if(year == 2012 || year == 2016 || year == 2020 || year == 2024){
-            if(month == 2){
+            if(month ==1) {
+                decYear+=0;
+            }else if(month == 2){
                 decYear += 0.0847;
             } else if (month == 3) {
                 decYear+=0.1639;
@@ -175,7 +181,9 @@ public class Main {
                 decYear+=0.9153;
             }
         }else{
-            if(month == 2){
+            if(month ==1) {
+                decYear+=0;
+            }else if(month == 2){
                 decYear += 0.0849;
             } else if (month == 3) {
                 decYear+=0.1616;

@@ -90,7 +90,7 @@ public class Grapher {
         chart.getStyler().setAxisTickPadding(0);
         chart.getStyler().setXAxisMin(startDate);
         chart.getStyler().setXAxisMax(endDate);
-        chart.getStyler().setYAxisMax(300.0);
+        chart.getStyler().setYAxisMax(200.0);
         chart.getStyler().setYAxisMin(0.0);
         chart.getStyler().setAxisTickMarkLength(15);
         chart.getStyler().setPlotMargin(20);
@@ -116,6 +116,7 @@ public class Grapher {
         chart.setYAxisGroupTitle(1, "Coronal Hole Area (1/1000s of a Solar Disk)");
         chart.getStyler().setYAxisGroupPosition(1, Styler.YAxisPosition.Right);
         chart.getStyler().setYAxisGroupTickLabelsColorMap(1,Color.GREEN);
+        chart.getStyler().setYAxisMax(1,80.0);
 
         //Style individual series
         sunspotSeries.setLineColor(XChartSeriesColors.BLUE);
@@ -124,6 +125,7 @@ public class Grapher {
         chSeries.setLineColor(XChartSeriesColors.GREEN);
         chSeries.setLineStyle(SeriesLines.SOLID);
         chSeries.setMarker(SeriesMarkers.NONE);
+        chSeries.setMarkerColor(Color.GREEN);
 
 
         //display chart
