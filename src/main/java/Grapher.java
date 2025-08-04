@@ -73,7 +73,7 @@ public class Grapher {
 
 
         //Create 2D graph
-        XYChart chart = new XYChartBuilder().width(1200).height(800).title("Sunspot Number Over Time").xAxisTitle("Year").yAxisTitle("Sunspot Number").build();
+        XYChart chart = new XYChartBuilder().width(1200).height(800).title("Sunspot Number and Coronal Hole Area Over Time").xAxisTitle("Year").yAxisTitle("Sunspot Number").build();
 
         // Customize Chart
         Color greenish = Color.getHSBColor((float)2.29,(float)0.8,(float)0.32);
